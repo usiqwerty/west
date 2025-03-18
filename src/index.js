@@ -62,13 +62,13 @@ class Trasher extends Dog {
         super('Громила', 5);
     }
 
-    modifyTakenDamage () {
+    modifyTakenDamage (value, fromCard, gameContext, continuation) {
         this.view.signalAbility(() => {
-
+            continuation(value - 1);
         })
     }
 
-    getDescriptions () { return []; }
+    getDescriptions () { return ["Если атакуют, урон уменьшается на 1"]; }
 }
 
 // Колода Шерифа, нижнего игрока.
@@ -80,7 +80,7 @@ const seriffStartDeck = [
 
 // Колода Бандита, верхнего игрока.
 const banditStartDeck = [
-    new Dog(),
+    new Trasher(),
 ];
 
 
