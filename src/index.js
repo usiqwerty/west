@@ -48,6 +48,20 @@ class Dog extends Card {
 }
 
 
+class Trasher extends Dog {
+    constructor() {
+        super('Громила', 5);
+    }
+
+    modifyTakenDamage () {
+        this.view.signalAbility(() => {
+
+        })
+    }
+
+    getDescriptions () { return []; }
+}
+
 // Колода Шерифа, нижнего игрока.
 const seriffStartDeck = [
     new Duck(),
