@@ -48,25 +48,6 @@ class Duck extends Creature {
     swims (){ console.log('float: both;') };
 }
 
-class Gatling extends Creature {
-    constructor() {
-        super('Гатлинг', 6);
-    }
-    attack(gameContext, continuation){
-        const taskQueue = new TaskQueue();
-
-        for (const oppositeCard of gameContext.oppositePlayer.table) {
-            taskQueue.push(onDone => this.view.showAttack(onDone));
-            taskQueue.push(onDone => {
-                if (oppositeCard) {
-                    this.dealDamageToCreature(2, oppositeCard, gameContext, onDone);
-                }
-            });
-        }
-        taskQueue.continueWith(continuation);
-    }
-}
-
 // Основа для собаки.
 class Dog extends Creature {
     constructor(name='Пес бандит', power=3) {
@@ -74,69 +55,93 @@ class Dog extends Creature {
     }
 }
 
+class Gatling extends Creature {
+    constructor() {
+        super("Гатлинг", 6);
+    }
+
+    attack(gameContext, continuation) {
+        const taskQueue = new TaskQueue();
+
+        const {currentPlayer, oppositePlayer, position, updateView} = gameContext;
+
+        for (const card of oppositePlayer.table) {
+            taskQueue.push(onDone => this.view.showAttack(onDone));
+            taskQueue.push(onDone => {
+                this.dealDamageToCreature(this.currentPower, card, gameContext, onDone);
+            });
+        }
+
+        taskQueue.continueWith(continuation);
+    }
+}
 
 class Trasher extends Dog {
     constructor() {
         super('Громила', 5);
-    }
+        this.modifyTakenDamage = function (value, fromCard, gameContext, continuation) {
+            this.view.signalAbility(() => continuation(value - 1));
+        };
 
-    modifyTakenDamage (value, fromCard, gameContext, continuation) {
-        this.view.signalAbility(() => {
-            continuation(value - 1);
-        })
-    }
-
-    getDescriptions () {
-        return ["Если атакуют, урон уменьшается на 1"];
+        this.getDescriptions = function () {
+            const baseDescriptions = Card.prototype.getDescriptions.call(this);
+            const abilityDescription = "Способность: Уменьшает урон на 1.";
+            return [...baseDescriptions, abilityDescription];
+        };
     }
 }
-
 class Lad extends Dog {
     constructor() {
         super('Браток', 2);
+
     }
-    static inGameCount = 0;
 
     static getInGameCount() {
-        return this.inGameCount;
+        return this.inGameCount || 0;
     }
 
     static setInGameCount(value) {
         this.inGameCount = value;
     }
 
+    static getBonus() {
+        const count = this.getInGameCount();
+        return count * (count + 1) / 2;
+    }
+
     doAfterComingIntoPlay(gameContext, continuation) {
-        Lad.setInGameCount(Lad.inGameCount + 1);
-        const {currentPlayer, oppositePlayer, position, updateView} = gameContext;
+        Lad.setInGameCount(Lad.getInGameCount() + 1);
         continuation();
     }
 
     doBeforeRemoving(continuation) {
-        Lad.setInGameCount(Lad.inGameCount - 1);
+        Lad.setInGameCount(Lad.getInGameCount() - 1);
         continuation();
     }
 
-    static getBonus() {
-        return this.getInGameCount() * (this.getInGameCount() - 1) / 2;
-    }
-
-    modifyDealedDamageToCreature (value, toCard, gameContext, continuation) {
-        console.log('нанёс', value + Lad.getBonus(), Lad.getInGameCount());
+    modifyDealedDamageToCreature(value, toCard, gameContext, continuation) {
         continuation(value + Lad.getBonus());
     }
 
     modifyTakenDamage(value, fromCard, gameContext, continuation) {
-        console.log('получил', value - Lad.getBonus(), Lad.getInGameCount());
-        continuation((value - Lad.getBonus()) || 0)
+        continuation(Math.max(value - Lad.getBonus(), 0));
     }
 
-    getDescriptions () {
-        return ["Чем их больше, тем они сильнее"];
+    getDescriptions() {
+        const baseDescriptions = Card.prototype.getDescriptions.call(this);
+
+        if (Lad.prototype.hasOwnProperty('modifyDealedDamageToCreature') ||
+            Lad.prototype.hasOwnProperty('modifyTakenDamage')) {
+            baseDescriptions.push("Чем их больше, тем они сильнее");
+        }
+
+        return baseDescriptions;
     }
 }
 
 // Колода Шерифа, нижнего игрока.
 const seriffStartDeck = [
+    new Duck(),
     new Duck(),
     new Gatling(),
 ];
@@ -145,7 +150,9 @@ const seriffStartDeck = [
 const banditStartDeck = [
     new Dog(),
     new Dog(),
-    new Dog(),
+    new Trasher(),
+    new Lad(),
+    new Lad(),
 ];
 
 
