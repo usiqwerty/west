@@ -71,6 +71,31 @@ class Trasher extends Dog {
     getDescriptions () { return ["Если атакуют, урон уменьшается на 1"]; }
 }
 
+class Lad extends Dog {
+    constructor() {
+        super('Браток', 2);
+
+    }
+
+    static setInGameCount(value) {
+        this.inGameCount = value;
+    }
+
+    static getInGameCount() {
+        return this.inGameCount || 0;
+    }
+
+    doAfterComingIntoPlay() {
+        this.setInGameCount(this.inGameCount() + 1);
+    }
+
+    doBeforeRemoving() {
+
+    }
+
+    getDescriptions () { return ["Чем их больше, тем они сильнее"]; }
+}
+
 // Колода Шерифа, нижнего игрока.
 const seriffStartDeck = [
     new Duck(),
